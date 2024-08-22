@@ -36,19 +36,21 @@ public class LoadJar4Test {
                 // .matches(".+Xk[^/]+Client")
                 if (name.endsWith(".class") && name.endsWith("Client.class")) {
                     // 移除文件名中的.class和可能的'/'（取决于jar包内的结构）
-                    String className = name.substring(0, name.length() - 6).replace('/', '.');
-                    CtClass cc = pool.get(className);
-                    ClassFile cf = cc.getClassFile2();
-                    ConstPool cp = cf.getConstPool();
-                    FeignAnnotationUtil.putUrlInThisAnnotation(cf, cp, Constants.ANNOTATION_FEIGN, "");
+                    try {
+                        String className = name.substring(0, name.length() - 6).replace('/', '.');
+                        CtClass cc = pool.get(className);
+                        ClassFile cf = cc.getClassFile2();
+                        ConstPool cp = cf.getConstPool();
+                        FeignAnnotationUtil.putUrlInThisAnnotationOnClassFile(cf, cp, Constants.ANNOTATION_FEIGN);
+                    }catch (NotFoundException e) {
+                        pool.insertClassPath(new LoaderClassPath(new java.net.URLClassLoader(new URL[]{jarUrl})));
+                    }
                 }
             }
 
             jar.close();
         } catch (IOException e) {
             e.printStackTrace();
-        } catch (NotFoundException e) {
-            throw new RuntimeException(e);
         }
     }
 

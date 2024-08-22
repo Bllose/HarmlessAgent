@@ -15,7 +15,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
+import java.net.URL;
 import java.security.ProtectionDomain;
+import java.util.Random;
 
 public class MyClassTransformer implements ClassFileTransformer {
     private static final Logger log = LoggerFactory.getLogger(MyClassTransformer.class);
@@ -82,20 +84,21 @@ public class MyClassTransformer implements ClassFileTransformer {
                 }
             }
 
-            if(className.matches(".+Xk[^/]+Client")) {
-                log.warn("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-                log.warn("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-                log.warn(className);
-                log.warn("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-                log.warn("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-                CtClass clazz = pool.get(className);
-                ClassFile cf = clazz.getClassFile2();
+            if(className.matches(".+(Xk|Pv|App|Jg|Pms)[^/]+Client")) {
+                ClassFile cf = cc.getClassFile2();
                 ConstPool cp = cf.getConstPool();
-                FeignAnnotationUtil.putUrlInThisAnnotation(cf, cp, Constants.ANNOTATION_FEIGN, "");
+                isChanged |= FeignAnnotationUtil.putUrlInThisAnnotationOnClassFile(cf, cp, Constants.ANNOTATION_FEIGN);
             }
 
-            if(isChanged) return cc.toBytecode();
-        } catch (IOException | CannotCompileException | NotFoundException e) {
+            if(isChanged) {
+                String separator = System.getProperty("file.separator");
+                String root = System.getProperty("user.dir");
+                root = root + separator + "target" + separator + "classes";
+                cc.writeFile(root);
+//                log.info("保存修改后的class ----------------------> {}", root + separator + className);
+                return cc.toBytecode();
+            }
+        } catch (IOException | CannotCompileException e) {
             throw new RuntimeException(e);
         }
 

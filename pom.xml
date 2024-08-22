@@ -6,12 +6,13 @@
 
     <groupId>org.bllose</groupId>
     <artifactId>HarmlessAgent</artifactId>
-    <version>1.0-RELEASE</version>
+    <version>1.1-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <ribbon.version>2.3.0</ribbon.version>
     </properties>
 
     <dependencies>
@@ -48,6 +49,33 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>3.12.0</version> <!-- 请替换为实际使用时的最新版本号 -->
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.13</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.netflix.ribbon</groupId>
+            <artifactId>ribbon-loadbalancer</artifactId>
+            <version>${ribbon.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.netflix.ribbon</groupId>
+            <artifactId>ribbon-core</artifactId>
+            <version>${ribbon.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-ribbon</artifactId>
+            <version>2.2.6.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>de.codecentric</groupId>
+            <artifactId>spring-boot-admin-server</artifactId>
+            <version>2.6.0</version>
         </dependency>
     </dependencies>
 

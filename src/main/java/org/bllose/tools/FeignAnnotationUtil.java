@@ -1,6 +1,6 @@
 package org.bllose.tools;
 
-import javassist.CtClass;
+import com.alibaba.fastjson.JSONObject;
 import javassist.CtMethod;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.AttributeInfo;
@@ -10,12 +10,14 @@ import javassist.bytecode.annotation.Annotation;
 import javassist.bytecode.annotation.MemberValue;
 import javassist.bytecode.annotation.StringMemberValue;
 import org.apache.commons.lang3.StringUtils;
+import org.bllose.discovery.ServerDiscover;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
+import java.io.File;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
+import java.util.Random;
 
 public class FeignAnnotationUtil {
 
@@ -26,10 +28,9 @@ public class FeignAnnotationUtil {
      * @param classFile
      * @param constPool
      * @param annotations
-     * @param url
      * @return
      */
-    public static boolean putUrlInThisAnnotation(ClassFile classFile, ConstPool constPool, String annotations, String url) {
+    public static boolean putUrlInThisAnnotationOnClassFile(ClassFile classFile, ConstPool constPool, String annotations) {
         if (classFile == null || constPool == null) {
             log.warn("removeAnnotations: classFile or constPool is null.");
             return false;
@@ -45,19 +46,31 @@ public class FeignAnnotationUtil {
 
         AnnotationsAttribute updateAnnotationsAttribute = new AnnotationsAttribute(constPool, AnnotationsAttribute.visibleTag);
 
-        Set<String> doneSet = new HashSet<>();
-
         for (Annotation annotation : annotationsAttribute.getAnnotations()) {
             String name = annotation.getTypeName();
             if(name.endsWith("FeignClient")) {
-                String serverName = annotation.getMemberValue("name").toString().replace("\"", "");
+                MemberValue nameValue = annotation.getMemberValue("name");
+                if(Objects.nonNull(nameValue)) {
+                    String serverName = nameValue.toString().replace("\"", "");
+                    String curUrl = ServerDiscover.fetchByServerName(serverName);
 
-                MemberValue mv = new StringMemberValue("http://localhost:8070", constPool);
-                Annotation curAnnotation = new Annotation(annotations, constPool);
-                curAnnotation.addMemberValue("url", mv);
+                    if(StringUtils.isNotBlank(curUrl)) {
+                        MemberValue mv = new StringMemberValue(curUrl, constPool);
+                        MemberValue mvName = new StringMemberValue(serverName, constPool);
 
-                annotation = curAnnotation;
-                isUpdate = true;
+                        Annotation curAnnotation = new Annotation(annotations, constPool);
+
+                        curAnnotation.addMemberValue("url", mv);
+                        curAnnotation.addMemberValue("name", mvName);
+
+                        annotation = curAnnotation;
+                        isUpdate = true;
+
+                        log.info("Feign : {} -> {}", classFile.getName(), curUrl);
+                    } else {
+                        log.warn("Feign : {} CAN'T FETCH URL", serverName);
+                    }
+                }
             }
 
             updateAnnotationsAttribute.addAnnotation(annotation);
@@ -66,9 +79,8 @@ public class FeignAnnotationUtil {
         // 更新注解
         if (isUpdate) {
             classFile.addAttribute(updateAnnotationsAttribute);
+//            log.info("classFile need to by update! {} {}", JSONObject.toJSONString(classFile), classFile);
         }
-
-        log.info("removeAnnotations: successfully, {}, {}", classFile.getName(), String.join(",", doneSet));
 
         return isUpdate;
     }
@@ -81,7 +93,7 @@ public class FeignAnnotationUtil {
      * @param url
      * @return
      */
-    public static boolean putUrlInThisAnnotation(CtMethod method, String targetAnnotation, String url) {
+    public static boolean putUrlInThisAnnotationOnMethod(CtMethod method, String targetAnnotation, String url) {
         if (method == null) {
             log.warn("addAnnotations: method is null.");
             return false;
