@@ -11,12 +11,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.net.URL;
 import java.security.ProtectionDomain;
+import java.util.Objects;
 import java.util.Random;
 
 public class MyClassTransformer implements ClassFileTransformer {
@@ -51,6 +53,10 @@ public class MyClassTransformer implements ClassFileTransformer {
             PATH_ROOT = param;
         }
         log.info("加载工作根目录: {}", PATH_ROOT);
+
+        // Feign 需要重新加载注册 class，会导致更前面加载的对象冲突
+        // The bean 'erp.FeignClientSpecification' could not be registered. A bean with that name has already been defined and overriding is disabled.
+        System.setProperty("spring.main.allow-bean-definition-overriding", "true");
     }
 
     private static Boolean XXLJOB_REMOVE = true;
@@ -84,18 +90,16 @@ public class MyClassTransformer implements ClassFileTransformer {
                 }
             }
 
-            if(className.matches(".+(Xk|Pv|App|Jg|Pms)[^/]+Client")) {
+            if(className.matches(".+/[^/]+Client")) {
                 ClassFile cf = cc.getClassFile2();
                 ConstPool cp = cf.getConstPool();
                 isChanged |= FeignAnnotationUtil.putUrlInThisAnnotationOnClassFile(cf, cp, Constants.ANNOTATION_FEIGN);
             }
 
             if(isChanged) {
-                String separator = System.getProperty("file.separator");
-                String root = System.getProperty("user.dir");
-                root = root + separator + "target" + separator + "classes";
+                String root = Objects.requireNonNull(loader.getResource("")).getPath();
                 cc.writeFile(root);
-//                log.info("保存修改后的class ----------------------> {}", root + separator + className);
+                log.info("保存修改后的class ----------------------> {}", root + System.getProperty("file.separator") + className);
                 return cc.toBytecode();
             }
         } catch (IOException | CannotCompileException e) {
